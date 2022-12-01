@@ -1,19 +1,27 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from 'node:fs/promises';
 
-// console.log(process.argv)
+// let readPromise = readFile("./pets.json" , 'utf-8')
+
+// readPromise.then((info) => {parseData(info)})
+// function parseDate(info){
+//    let data = JSON.parse(info)
+//    return data
+//}
+
+
 let subcommand = process.argv[2]
 if( subcommand === 'read'){
     readFile("./pets.json" , 'utf-8').then((info) => {
         let data = JSON.parse(info)
-        let x = process.argv[3]
-        if( x >= data.length || 0 > x){
+        let index = process.argv[3]
+        if( index >= data.length || 0 > index){
             console.error("Usage: node pets.js read INDEX")
             process.exit([1]);
-        } else if(x === undefined) {
+        } else if(index === undefined) {
             console.log(data)
         } else {
-            console.log(data[x])
+            console.log(data[index])
         }
     })
 

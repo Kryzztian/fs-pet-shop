@@ -1,5 +1,6 @@
 import express, { application } from "express";
 import { readFile, writeFile } from 'node:fs/promises';
+import morgan from "morgan";
 
 let app = express();
 let info =await readFile("./pets.json" , 'utf-8')
@@ -10,21 +11,19 @@ let create = (newPet) => {
     writeFile("./pets.json" , jsonUpdate)
 }
 app.use(express.json());
+app.use(morgan("tiny"));
 
 
 app.get('/pets', async (req, res) => {
     res.send(data)
-    process.exit([1]);
 })
 
 app.get('/pets/:index', async (req, res) => {
     let index = req.params.index
     if(data[index] === undefined){
         res.status(404).send('Not Found')
-        process.exit([1]); 
     } else{
         res.send(data[index])
-        process.exit([1]);
     }
 })
 
@@ -33,17 +32,14 @@ app.post('/pets', async (req, res) => {
     let pet = req.body;
     if(typeof pet.age !== "number" || pet.kind === undefined || pet.name === undefined){
         res.status(400).send('Bad Request')
-        process.exit([1]);
     } else {
         create(pet)
         res.send(pet);
-        process.exit([1]);
     }
 })
 
 app.use((req, res) => {
     res.status(404).send("Not Found")
-    process.exit([1]);
 })
 
 app.get('/boom', (req, res) => {

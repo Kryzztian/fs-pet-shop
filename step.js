@@ -70,9 +70,7 @@ async function destroy(){
         let jsonUpdate = JSON.stringify(data)
         writeFile("./pets.json" , jsonUpdate)
         }
-    }
-
-    
+    }    
 if( subcommand === 'read'){
     read();
 } else if (subcommand === 'create'){

@@ -1,66 +1,96 @@
 import express, { application } from "express";
 import { readFile, writeFile } from 'node:fs/promises';
 import morgan from "morgan";
+import postgres from "postgres";
+
+
 
 let app = express();
-let info = await readFile("./pets.json" , 'utf-8')
-let data = (JSON.parse(info));
-let jsonUpdate = JSON.stringify(data)
+// let info = await readFile("./pets.json" , 'utf-8');
+// let data = (JSON.parse(info));
+// let jsonUpdate = JSON.stringify(data);
+// let create = (newPet) => {
+    //     data.push(newPet);
+    //     return jsonUpdate
+    // }
+// MAYBE I will not be using the above variables
 
-let create = (newPet) => {
-    data.push(newPet);
-    return jsonUpdate
-}
+let sql = postgres({
+    database : 'petshop',
+    password : 'Kryzztian1!'
+});
 
-// let update = (change) => {
-//     for( let key in change) {
-//         existingPet[key] = change[key]
-//     }
-//     return jsonUpdate
-// }
+let crudFunc = {
+    async pets(){ 
+        let pet = await sql`SELECT * FROM pets`;
+        return pet
+    },
+    async selectPet(index){
+        let pet = await sql `SELECT * FROM pets WHERE id = ${index}`
+        return pet
+    }, 
+    async createPet(age, name, kind){
+        let pet = await sql`INSERT INTO pets 
+        (age, name, kind) 
+        VALUES
+        (${age},${name},${kind}) 
+        RETURNING name, age;`
+        return pet;
+    },
+    async updatePet(change, id){
+        let pet = await sql`
+            UPDATE pets 
+            SET ${sql(change)}
+            WHERE id = ${id} RETURNING *
+            `
+            return pet
+            //sql(`${existingPet}, ${name || null}, ${age || null}, ${kind || null}`)
+            //console.log(id)
+        }
+        
+    }
+
 
 app.use(express.json());
 app.use(morgan("tiny"));
 
-
 app.get('/pets', async (req, res) => {
-    res.send(data)
+   res.send(await crudFunc.pets())
 })
 
 app.get('/pets/:index', async (req, res) => {
-    let { index } = req.params;
-    if(data[index] === undefined){
-        res.status(404).send('Not Found') 
-    } else{
-        res.send(data[index])
+    let index = req.params.index;
+    let result = await crudFunc.selectPet(index);
+    if (result.length === 0){
+        res.status(404);
+        res.set("Content-Type", "text/plain");
+        res.send("Not Found");
+    } else {
+        res.json((result)[0])
     }
 })
 
 
 app.post('/pets', async (req, res) => {
     let pet = req.body;
-    if(typeof pet.age !== "number" || pet.kind === undefined || pet.name === undefined){
+    let { age, name, kind } = pet;
+    if(typeof age !== "number" || kind === undefined || name === undefined){
         res.status(400).send('Bad Request')
     } else {
-        writeFile("./pets.json" , create(pet));
+        await crudFunc.createPet(age, name, kind);
         res.send(pet);
     }
 })
 
 app.patch('/pets/:index', async (req, res) => {
     let change = req.body;
-    //let { index } = req.params; why doesnt this work for me
-    let index = req.params.index;
-    let existingPet = data[index];
+    let id = req.params.index;
+    let existingPet = await crudFunc.selectPet(id);
     if((Object.hasOwn(change, "age") === true && typeof change.age === "number") 
     || Object.hasOwn(change, "kind") === true 
-    || Object.hasOwn(change, "name") === true)
-        {
-        for( let key in change) {
-        existingPet[key] = change[key];
-        }
-    res.send(data[index])
-    writeFile("./pets.json" , JSON.stringify(data));
+    || Object.hasOwn(change, "name") === true) {
+        let updatedPet = await crudFunc.updatePet(change, id);
+        res.send(updatedPet[0])
     } else {
         res.status(400).send('bad response')
             // '| Request Method | Request URL | Request Body | Response Status | <br> | Response Content-Type | Response Body | <br> | POST | /pets | { "name": "", "age": "two", "kind": "" } | 400 | text/plain | Bad Request | |'
